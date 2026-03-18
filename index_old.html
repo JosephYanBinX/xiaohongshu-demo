@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #FF2442;
+    --gray: #999;
+    --bg: #f0f0f0;
+    --white: #fff;
+    --text: #1a1a1a;
+    --text2: #555;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: var(--white);
+    padding: 10px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  /* AI chatbot 入口 */
+  .ai-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* 中间 tabs */
+  .center-tabs {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .tab {
+    font-size: 16px;
+    color: #aaa;
+    cursor: pointer;
+    padding-bottom: 2px;
+    font-weight: 500;
+    position: relative;
+    white-space: nowrap;
+  }
+
+  .tab.active {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 17px;
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 3px;
+    background: var(--red);
+    border-radius: 2px;
+  }
+
+  /* 右边搜索 */
+  .search-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .header-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 8px -16px 0;
+  }
+
+  /* ===== FEED 双列 ===== */
+  .feed {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 6px;
+    background: var(--bg);
+  }
+
+  /* ---- 图片卡（左列为主）---- */
+  .img-card {
+    background: var(--white);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .img-card:active { transform: scale(0.97); }
+
+  .img-card .card-cover {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    position: relative;
+  }
+
+  .video-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .img-card .card-body {
+    padding: 8px 8px 10px;
+  }
+
+  .img-card .card-title {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  /* ---- 通用 meta 行 ---- */
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-author {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .author-avatar-mini {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+  }
+
+  .author-name-mini {
+    font-size: 11px;
+    color: var(--gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .like-count {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--gray);
+    flex-shrink: 0;
+  }
+
+  /* ===== TABBAR ===== */
+  .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    background: var(--white);
+    border-top: 1px solid #ebebeb;
+    display: flex;
+    align-items: center;
+    padding: 8px 0 22px;
+    z-index: 200;
+  }
+
+  .tabbar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--gray);
+    cursor: pointer;
+  }
+
+  .tabbar-item.active { color: var(--text); font-weight: 600; }
+
+  .tabbar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .plus-btn {
+    width: 48px;
+    height: 32px;
+    background: var(--red);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .plus-btn svg { display: block; }
+
+  /* ===== DETAIL PAGE ===== */
+  #detail-page {
+    background: var(--white);
+    min-height: 100vh;
+    padding-bottom: 88px;
+  }
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .back-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  .back-btn:active { background: #f5f5f5; }
+
+  .detail-header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .detail-header-more {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .detail-cover {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .detail-body { padding: 14px 16px; }
+
+  .detail-author-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .detail-avatar-wrap {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  .detail-author-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .detail-author-fans { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  .follow-btn {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .follow-btn.following { background: #f2f2f2; color: var(--gray); }
+
+  .detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .detail-content {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.85;
+    margin-bottom: 12px;
+  }
+
+  .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+  .tag {
+    background: #fff0f2;
+    color: var(--red);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .detail-meta-row {
+    font-size: 12px;
+    color: #bbb;
+    margin-bottom: 4px;
+  }
+
+  /* 评论 */
+  .comments-section { border-top: 8px solid #f5f5f5; }
+
+  .comments-header {
+    padding: 14px 16px 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .comment-item {
+    padding: 10px 16px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .comment-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .comment-body { flex: 1; }
+  .comment-name { font-size: 12px; color: var(--gray); margin-bottom: 4px; }
+  .comment-text { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+
+  .comment-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  .comment-time { font-size: 11px; color: #ccc; }
+
+  .comment-like {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 11px; color: var(--gray);
+  }
+
+  /* 详情底部操作栏 */
+  .detail-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    background: white;
+    border-top: 1px solid #ebebeb;
+    display: flex;
+    align-items: center;
+    padding: 10px 14px 28px;
+    gap: 10px;
+    z-index: 200;
+  }
+
+  .comment-input-box {
+    flex: 1;
+    background: #f5f5f5;
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--gray);
+  }
+
+  .action-icons-row { display: flex; gap: 14px; }
+
+  .act-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--gray);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .act-icon.liked { color: var(--red); }
+  .act-icon.collected { color: #ffb400; }
+
+  /* 动画 */
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  #detail-page.sliding-in { animation: slideIn 0.25s cubic-bezier(.25,.46,.45,.94); }
+</style>
+</head>
+<body>
+
+<!-- ===== 首页 ===== -->
+<div id="home-page" class="page active">
+
+  <!-- 顶部 -->
+  <div class="header">
+    <div class="header-row">
+
+      <!-- 左：AI chatbot 入口 -->
+      <div class="ai-icon" title="AI 助手">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          <circle cx="9" cy="10" r="1" fill="#1a1a1a" stroke="none"/>
+          <circle cx="12" cy="10" r="1" fill="#1a1a1a" stroke="none"/>
+          <circle cx="15" cy="10" r="1" fill="#1a1a1a" stroke="none"/>
+        </svg>
+      </div>
+
+      <!-- 中：三个 tab -->
+      <div class="center-tabs">
+        <div class="tab" onclick="switchTab(this)">关注</div>
+        <div class="tab active" onclick="switchTab(this)">发现</div>
+        <div class="tab" onclick="switchTab(this)">上海</div>
+      </div>
+
+      <!-- 右：搜索 -->
+      <div class="search-icon">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7.5"/>
+          <path d="M21 21l-4.5-4.5"/>
+        </svg>
+      </div>
+
+    </div>
+    <div class="header-divider"></div>
+  </div>
+
+  <!-- 双列 Feed -->
+  <div class="feed" id="note-feed"></div>
+  <div style="height: 80px;"></div>
+
+  <!-- 底部导航 -->
+  <div class="tabbar">
+    <div class="tabbar-item active">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      首页
+    </div>
+    <div class="tabbar-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      市集
+    </div>
+    <div class="tabbar-center">
+      <div class="plus-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="tabbar-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      消息
+    </div>
+    <div class="tabbar-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      我
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== 详情页 ===== -->
+<div id="detail-page" class="page">
+
+  <div class="detail-header">
+    <div class="back-btn" onclick="goBack()">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+    </div>
+    <div class="detail-header-title">笔记详情</div>
+    <div class="detail-header-more">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round">
+        <circle cx="5" cy="12" r="1.2" fill="#1a1a1a" stroke="none"/>
+        <circle cx="12" cy="12" r="1.2" fill="#1a1a1a" stroke="none"/>
+        <circle cx="19" cy="12" r="1.2" fill="#1a1a1a" stroke="none"/>
+      </svg>
+    </div>
+  </div>
+
+  <div id="detail-cover" class="detail-cover"></div>
+
+  <div class="detail-body">
+    <div class="detail-author-row">
+      <div id="d-avatar" class="detail-avatar-wrap"></div>
+      <div>
+        <div id="d-name" class="detail-author-name"></div>
+        <div id="d-fans" class="detail-author-fans"></div>
+      </div>
+      <button class="follow-btn" id="follow-btn" onclick="toggleFollow(this)">+ 关注</button>
+    </div>
+
+    <div id="d-title" class="detail-title"></div>
+    <div id="d-content" class="detail-content"></div>
+    <div id="d-tags" class="detail-tags"></div>
+    <div id="d-meta" class="detail-meta-row"></div>
+  </div>
+
+  <div class="comments-section">
+    <div id="c-header" class="comments-header"></div>
+    <div id="c-list"></div>
+  </div>
+
+  <div style="height:88px;"></div>
+
+  <div class="detail-action-bar">
+    <div class="comment-input-box">说点什么...</div>
+    <div class="action-icons-row">
+      <div class="act-icon" id="like-action" onclick="toggleLike()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <span id="like-count"></span>
+      </div>
+      <div class="act-icon" id="collect-action" onclick="toggleCollect()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span id="collect-count"></span>
+      </div>
+      <div class="act-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span id="comment-count"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== 数据（img-card 或 article-card 或 hot-card）=====
+const notes = [
+  {
+    id: 1, type: 'img',
+    coverH: 240, coverBg: '#d4c5b0', coverEmoji: '⚽', isVideo: true,
+    title: '亚冠赛场被 C 罗接见了！',
+    author: { name: '烈燥瀚', avatarBg: '#c5a880', emoji: '🧑' },
+    likes: 1039,
+    content: '人生难忘的一天！在亚冠比赛现场意外遇到了 C 罗，他主动过来和我们打招呼，还和孩子们合了影 😭\n\n现场气氛太热烈了，感谢这次旅行给了我这么难忘的记忆！',
+    tags: ['#C罗', '#亚冠', '#足球', '#旅行'],
+    comments: [
+      { emoji: '😍', name: '球迷小明', text: '太羡慕了！C 罗好亲切！', time: '刚刚', likes: 234 },
+      { emoji: '⚽', name: '踢球的豆豆', text: '孩子们太幸运了！', time: '5分钟前', likes: 89 },
+    ],
+    collectCount: 2341, commentCount: 342,
+  },
+  {
+    id: 2, type: 'img',
+    coverH: 220, coverBg: '#e8e4dc', coverEmoji: '🏢', isVideo: false,
+    title: 'MiniMax：一个河南县城青年和他的3000亿',
+    author: { name: '动察 Beating', avatarBg: '#e8b4b8', emoji: '📻' },
+    likes: 224,
+    content: '2014年，百度研究院来了个实习生，中科院自动化所的博士，河南县城出来的。他给自己算过一笔账：毕业后最理想的去处是IBM，写Java，年薪大概50万。\n\n十年后，他创立的 MiniMax 估值突破3000亿，成为中国最受瞩目的 AI 独角兽之一。\n\n这是一个关于执念、豪赌与时代机遇的故事。',
+    tags: ['#AI创业', '#MiniMax', '#商业故事'],
+    comments: [
+      { emoji: '💡', name: '科技观察者', text: '太励志了！中国的 AI 力量！', time: '10分钟前', likes: 156 },
+      { emoji: '📱', name: '创业er', text: '想看完整版采访在哪里？', time: '1小时前', likes: 67 },
+    ],
+    collectCount: 891, commentCount: 203,
+  },
+  {
+    id: 3, type: 'img',
+    coverH: 280, coverBg: '#b8c8d0', coverEmoji: '🐈', isVideo: false,
+    title: '灵珠还是魔丸｜德文',
+    author: { name: '奥莉不是奥利奥', avatarBg: '#d0b8c8', emoji: '🐱' },
+    likes: 94,
+    content: '养了这只德文卷毛猫快半年了，每天都在惊叹它的表情管理能力 😂\n\n时而是天使，时而是恶魔，性格两极化到极致，但就是让人爱不释手！\n\n德文卷是真的很粘人，跟我说话它都要搭腔的那种。',
+    tags: ['#德文卷毛猫', '#猫咪日常', '#宠物'],
+    comments: [
+      { emoji: '🐾', name: '猫奴本奴', text: '这个表情！！太生动了哈哈哈', time: '2小时前', likes: 45 },
+    ],
+    collectCount: 312, commentCount: 67,
+  },
+  {
+    id: 4, type: 'img',
+    coverH: 260, coverBg: '#f8e8e0', coverEmoji: '🏀', isVideo: false,
+    title: '新老交替阵痛期仍在，中国女篮世界杯前路藏隐忧',
+    author: { name: '体坛周报', avatarBg: '#e08080', emoji: '📰' },
+    likes: 951,
+    content: '中国女篮在武汉世界杯资格赛中顺利拿到正赛入场券，但备受期待的"移动长城"李月汝、韩旭、张子宇三大内线首次合体却喜忧参半。\n\n三人轮换虽有高光，但两两搭档时攻防失序，暴露出核心阵容兼容性难题。李月汝身体对抗和投篮稳定性、韩旭赛后自曝脚趾旧伤，以及张子宇仍处于适应期的成长烦恼，让外界对巴黎世界杯的前景保持审慎乐观。',
+    tags: ['#中国女篮', '#世界杯', '#篮球'],
+    comments: [
+      { emoji: '🏆', name: '篮球迷Jenny', text: '加油中国女篮！相信她们！', time: '3小时前', likes: 234 },
+      { emoji: '💪', name: '体育迷小王', text: '这届确实需要时间磨合，期待世界杯！', time: '4小时前', likes: 189 },
+    ],
+    collectCount: 2341, commentCount: 512,
+  },
+  {
+    id: 5, type: 'img',
+    coverH: 210, coverBg: '#c8d4c0', coverEmoji: '🏛️', isVideo: false,
+    title: '欧洲小镇石板路，随手一拍都是大片',
+    author: { name: '行摄笔记', avatarBg: '#b0c0b0', emoji: '📷' },
+    likes: 3821,
+    content: '布拉格老城区的石板路，踩着踏踏响，沿街都是百年建筑。完全不需要构图技巧，随手一按快门就能出片。\n\n旅行的意义就在于此——让你发现美无处不在。',
+    tags: ['#布拉格', '#欧洲旅行', '#街拍', '#胶片风'],
+    comments: [
+      { emoji: '📸', name: '摄影爱好者', text: '光线和色调太美了！', time: '30分钟前', likes: 678 },
+      { emoji: '✈️', name: '计划去布拉格', text: '请问这是哪条街？', time: '1小时前', likes: 234 },
+    ],
+    collectCount: 5621, commentCount: 892,
+  },
+  {
+    id: 6, type: 'img',
+    coverH: 230, coverBg: '#e4d4c8', coverEmoji: '🍜', isVideo: false,
+    title: '上海这10家隐藏宝藏小馆子，只有本地人才知道',
+    author: { name: '上海吃货地图', avatarBg: '#d4a088', emoji: '🍽️' },
+    likes: 5632,
+    content: '不在大众点评热搜，不靠网红打卡，就藏在弄堂深处，却让回头客念念不忘。\n\n**Vol.1 ｜ 阿婆面**\n地址：静安区康定路xxx弄\n招牌：葱油拌面+焦圈，8块钱吃撑\n\n**Vol.2 ｜ 老王生煎**\n地址：黄浦区老西门附近\n开门90分钟必然卖完，8点前必须到！\n\n每一家都是我亲测过不下10次的，绝对不踩雷。',
+    tags: ['#上海美食', '#隐藏美食', '#本地人推荐'],
+    comments: [
+      { emoji: '😋', name: '上海土著', text: '阿婆面我知道！！太好吃了！', time: '2小时前', likes: 892 },
+      { emoji: '🚇', name: '外地来沪', text: '求地址大全！！！', time: '3小时前', likes: 456 },
+    ],
+    collectCount: 12891, commentCount: 1832,
+  },
+];
+
+// ===== 渲染首页 =====
+function renderFeed() {
+  const feed = document.getElementById('note-feed');
+  feed.innerHTML = notes.map(n => renderImgCard(n)).join('');
+}
+
+function renderImgCard(n) {
+  return `
+    <div class="img-card" onclick="openDetail(${n.id})">
+      <div class="card-cover" style="height:${n.coverH}px;background:${n.coverBg};">
+        ${n.coverEmoji}
+        ${n.isVideo ? `<div class="video-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-title">${n.title}</div>
+        <div class="card-meta">
+          <div class="card-author">
+            <div class="author-avatar-mini" style="background:${n.author.avatarBg}">${n.author.emoji}</div>
+            <span class="author-name-mini">${n.author.name}</span>
+          </div>
+          <div class="like-count">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            ${formatNum(n.likes)}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ===== 详情页 =====
+let currentNote = null;
+
+function openDetail(id) {
+  currentNote = notes.find(n => n.id === id);
+  const n = currentNote;
+
+  // 封面
+  document.getElementById('detail-cover').innerHTML = `
+    <div style="width:100%;height:320px;background:${n.coverBg};display:flex;align-items:center;justify-content:center;font-size:96px;">
+      ${n.coverEmoji}
+    </div>`;
+
+  // 作者
+  document.getElementById('d-avatar').style.background = n.author.avatarBg;
+  document.getElementById('d-avatar').textContent = n.author.emoji;
+  document.getElementById('d-name').textContent = n.author.name;
+  document.getElementById('d-fans').textContent = '点击查看主页';
+
+  // 内容
+  document.getElementById('d-title').textContent = n.title;
+  document.getElementById('d-content').innerHTML = (n.content || '').replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  document.getElementById('d-tags').innerHTML = (n.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  document.getElementById('d-meta').textContent = `${formatNum(n.likes)} 人点赞 · 2026-03-18 发布`;
+
+  // 操作栏
+  document.getElementById('like-count').textContent = formatNum(n.likes);
+  document.getElementById('collect-count').textContent = formatNum(n.collectCount);
+  document.getElementById('comment-count').textContent = formatNum(n.commentCount);
+  document.getElementById('like-action').classList.remove('liked');
+  document.getElementById('collect-action').classList.remove('collected');
+
+  const fb = document.getElementById('follow-btn');
+  fb.textContent = '+ 关注';
+  fb.classList.remove('following');
+
+  // 评论
+  document.getElementById('c-header').textContent = `${formatNum(n.commentCount)} 条评论`;
+  document.getElementById('c-list').innerHTML = (n.comments || []).map(c => `
+    <div class="comment-item">
+      <div class="comment-avatar">${c.emoji}</div>
+      <div class="comment-body">
+        <div class="comment-name">${c.name}</div>
+        <div class="comment-text">${c.text}</div>
+        <div class="comment-footer">
+          <span class="comment-time">${c.time}</span>
+          <span class="comment-like">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            ${c.likes}
+          </span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // 切页
+  document.getElementById('home-page').classList.remove('active');
+  const dp = document.getElementById('detail-page');
+  dp.classList.add('active', 'sliding-in');
+  dp.scrollTop = 0;
+  setTimeout(() => dp.classList.remove('sliding-in'), 300);
+}
+
+function goBack() {
+  document.getElementById('detail-page').classList.remove('active');
+  document.getElementById('home-page').classList.add('active');
+}
+
+function toggleFollow(btn) {
+  btn.classList.toggle('following');
+  btn.textContent = btn.classList.contains('following') ? '已关注' : '+ 关注';
+}
+
+function toggleLike() {
+  const btn = document.getElementById('like-action');
+  const isLiked = btn.classList.toggle('liked');
+  document.getElementById('like-count').textContent = formatNum(currentNote.likes + (isLiked ? 1 : 0));
+  btn.style.transform = 'scale(1.35)';
+  setTimeout(() => btn.style.transform = '', 150);
+}
+
+function toggleCollect() {
+  const btn = document.getElementById('collect-action');
+  const isC = btn.classList.toggle('collected');
+  document.getElementById('collect-count').textContent = formatNum(currentNote.collectCount + (isC ? 1 : 0));
+  btn.style.transform = 'scale(1.35)';
+  setTimeout(() => btn.style.transform = '', 150);
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function formatNum(n) {
+  if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+  return String(n);
+}
+
+renderFeed();
+</script>
+</body>
+</html>
